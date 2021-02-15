@@ -59,6 +59,9 @@ module Locomotive
                    arch:    platform.arch)
         say format('Hierarchy: %<hierarchy>s',
                    hierarchy: platform.family_hierarchy.reverse.join('/'))
+
+        # Idle command will also trigger discovery commands on first run
+        session.run_idle
       end
 
       def target_detectors
@@ -134,9 +137,10 @@ module Locomotive
       end
 
       def prompt
-        format('locomotive(%<session_id>d: %<backend>s)> '.green,
+        format(::Locomotive::PROMPT.green,
                session_id: current_session_id,
-               backend:    current_session&.backend_type || '<none>',
+               backend:    current_session.backend || 'unknown',
+               host:       current_session.host || 'unknown',
                path:       current_session.pwd || '?')
       end
 

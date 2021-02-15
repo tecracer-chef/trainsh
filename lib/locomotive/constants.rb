@@ -12,4 +12,7 @@ module Locomotive
 
   # Minimum version for remote file manipulation
   TRAIN_MUTABLE_VERSION = '3.5.0'.freeze
+
+  # Prompt (TODO: Make configuratble)
+  PROMPT = 'locomotive(@%<session_id>d:%<host>s/%<backend>s)> '.freeze
 end

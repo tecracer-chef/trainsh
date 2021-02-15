@@ -65,8 +65,6 @@ module LocomotiveCli
     end
 
     def builtincmd_env(_args = nil)
-      session.run_idle unless session.env
-
       puts session.env
     end
 
@@ -92,9 +90,11 @@ module LocomotiveCli
       puts Readline::HISTORY.to_a
     end
 
-    def builtincmd_pwd(_args = nil)
-      session.run_idle unless session.pwd
+    def builtincmd_host(_args = nil)
+      puts session.host
+    end
 
+    def builtincmd_pwd(_args = nil)
       puts session.pwd
     end
 
@@ -143,7 +143,7 @@ module LocomotiveCli
     private
 
     def train_mutable?
-      return true if !session.respond_to?(:upload)
+      return true if session.respond_to?(:upload)
 
       say "Support for remote file modification needs at least Train #{::Locomotive::TRAIN_MUTABLE_VERSION} (is: #{::Train::VERSION})".red
     end

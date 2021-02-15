@@ -58,7 +58,11 @@ module Locomotive
     end
 
     def parse(result)
-      result.stdout.split(MAGIC_STRING).map(&:strip)
+      result.stdout
+        .gsub(/\r\n/, "\n")
+        .gsub(/ *$/, '')
+        .split(MAGIC_STRING)
+        .map(&:strip)
     end
 
     def aggregate_commands
@@ -76,7 +80,7 @@ module Locomotive
     extend Forwardable
     def_delegators :@connection, :platform, :run_command, :backend_type, :file, :upload, :download
 
-    attr_reader :url, :connection
+    attr_reader :connection, :backend, :host
 
     attr_accessor :pwd, :env
 
@@ -89,6 +93,9 @@ module Locomotive
 
       data = Train.unpack_target_from_uri(url)
       backend = Train.create(data[:backend], data)
+
+      @backend = data[:backend]
+      @host = data[:host]
 
       @connection = backend.connection
       connection.wait_until_ready
@@ -108,6 +115,11 @@ module Locomotive
       connect(url)
     end
 
+    # Redact password information
+    def url
+      Addressable::URI.parse(@url).omit(:password).to_s
+    end
+
     def run(command)
       command = Command.new(command, @connection)
 
@@ -115,6 +127,9 @@ module Locomotive
       command.postfix(pwd_get) { |output| @pwd = output }
       command.prefix(env_set)
       command.postfix(env_get) { |output| @env = output }
+
+      # Discovery tasks
+      command.prefix(host_get) { |output| @host = output} if host.nil? || host == 'unknown'
 
       command.run
     end
@@ -124,6 +139,10 @@ module Locomotive
     end
 
     private
+
+    def host_get
+      "hostname"
+    end
 
     def pwd_get
       platform.windows? ? "(Get-Location).Path" : "pwd"
