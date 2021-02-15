@@ -58,6 +58,10 @@ module LocomotiveCli
       say 'Backend for session does not implement file operations'.red
     end
 
+    def builtincmd_env(_args = nil)
+      puts session.env
+    end
+
     def builtincmd_read(path = nil)
       if path.nil? || path.strip.empty?
         say 'Expecting remote path, e.g. `!read /tmp/somefile.txt`'.red
@@ -78,6 +82,10 @@ module LocomotiveCli
 
     def builtincmd_history(_args = nil)
       puts Readline::HISTORY.to_a
+    end
+
+    def builtincmd_pwd(_args = nil)
+      puts session.pwd
     end
 
     def builtincmd_reconnect(_args = nil)

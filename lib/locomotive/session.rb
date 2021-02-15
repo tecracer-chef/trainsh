@@ -3,9 +3,76 @@ require 'forwardable'
 require 'train'
 
 module Locomotive
-  class Session
+  class Command
     MAGIC_STRING = "mVDK6afaqa6fb7kcMqTpR2aoUFbYsRt889G4eGoI".freeze
 
+    attr_writer :connection
+
+    def initialize(command, connection)
+      @command = command
+      @connection = connection
+
+      @prefixes = []
+      @postfixes = []
+    end
+
+    def prefix(prefix_command, &block)
+      @prefixes << {
+        command: prefix_command,
+        block: block
+      }
+    end
+
+    def postfix(postfix_command, &block)
+      @postfixes << {
+        command: postfix_command,
+        block: block
+      }
+    end
+
+    def run
+      result = @connection.run_command aggregate_commands
+      stdouts = parse(result)
+
+      prefixes_stdout = stdouts.first(@prefixes.count).reverse
+      @prefixes.each_with_index do |prefix, idx|
+        next if prefix[:block].nil?
+
+        prefix[:block].call prefixes_stdout[idx]
+      end
+      @prefixes.count.times { stdouts.shift } unless @prefixes.empty?
+
+      postfixes_stdout = stdouts.last(@postfixes.count)
+      @postfixes.each_with_index do |postfix, idx|
+        next if postfix[:block].nil?
+
+        postfix[:block].call postfixes_stdout[idx]
+      end
+      @postfixes.count.times { stdouts.pop } unless @postfixes.empty?
+
+      raise 'Pre-/Postfix command processing ended up with more than one remaining stdout' unless stdouts.count == 1
+
+      result.stdout = stdouts.first
+      result.exit_status = 0 # TODO
+      result
+    end
+
+    def parse(result)
+      result.stdout.split(MAGIC_STRING).map(&:strip)
+    end
+
+    def aggregate_commands
+      separator = "\necho #{MAGIC_STRING}\n"
+
+      commands = @prefixes.reverse.map { |ary| ary[:command] }
+      commands << @command
+      commands.concat @postfixes.map { |ary| ary[:command] }
+
+      commands.join(separator)
+    end
+  end
+
+  class Session
     extend Forwardable
     def_delegators :@connection, :platform, :run_command, :backend_type, :file, :upload, :download
 
@@ -42,25 +109,18 @@ module Locomotive
     end
 
     def run(command)
-      wrapped_command = batch_commands(pwd_set, command,pwd_get) # TODO: Trashes exitcode
+      command = Command.new(command, @connection)
 
-      # command.prefix(pwd_set) { }
-      # command.postfix(pwd_get) { |output| @pwd = output }
+      command.prefix(pwd_set)
+      command.postfix(pwd_get) { |output| @pwd = output }
+      command.prefix(env_set)
+      command.postfix(env_get) { |output| @env = output }
 
-      result = connection.run_command(wrapped_command)
-
-      output = parse_batch(result.stdout)
-      @pwd = output.last
-
-      result.stdout = output[1]
-      result.exit_status = output[2]
-
-      result
+      command.run
     end
 
     private
 
-    # State-keeping
     def pwd_get
       platform.windows? ? "(Get-Location).Path" : "pwd"
     end
@@ -71,22 +131,14 @@ module Locomotive
       platform.windows? ? "Set-Location #{path}" : "cd #{path}"
     end
 
+    # TODO: Preserve Windows environment variables
     def env_get
-      # TODO
+      platform.windows? ? "" : "export"
     end
 
+    # TODO: Preserve Windows environment variables
     def env_set
-      # TODO
-    end
-
-    def batch_commands(*args)
-      separator = "\necho #{MAGIC_STRING}\n"
-
-      args.join(separator)
-    end
-
-    def parse_batch(batch_output)
-      batch_output.split(MAGIC_STRING).map(&:strip)
+      platform.windows? ? "" : env
     end
   end
 end

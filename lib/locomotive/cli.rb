@@ -86,14 +86,10 @@ module Locomotive
       def execute_via_train(input, session_id = current_session_id)
         return if interactive_command? input
 
-        # TODO: Set last path
-        # TODO: Get path after
-        # TODO: Not open a new shell each time, but "append" (Env vars, Path etc)
-
         command_result = @sessions[session_id].run(input)
 
         say command_result.stdout unless command_result.stdout.empty?
-        say command_result.stderr.red if command_result.exit_status != 0
+        say command_result.stderr.red
       end
 
       def execute_builtin(input)
