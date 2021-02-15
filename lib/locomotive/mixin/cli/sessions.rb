@@ -30,6 +30,10 @@ module LocomotiveCli
       @current_session_id ||= 0
     end
 
+    def current_session
+      @sessions[current_session_id]
+    end
+
     def validate_session_id(session_id)
       unless session_id.match?(/^[0-9]+$/)
         say 'Expected session id to be numeric'.red

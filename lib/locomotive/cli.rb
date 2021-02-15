@@ -90,7 +90,7 @@ module Locomotive
         # TODO: Get path after
         # TODO: Not open a new shell each time, but "append" (Env vars, Path etc)
 
-        command_result = @sessions[session_id].run_command(input)
+        command_result = @sessions[session_id].run(input)
 
         say command_result.stdout unless command_result.stdout.empty?
         say command_result.stderr.red if command_result.exit_status != 0
@@ -135,9 +135,10 @@ module Locomotive
       end
 
       def prompt
-        format('locomotive(%<session_id>d: %<backend>s)> '.green,
+        format('locomotive(%<session_id>d: %<backend>s:%<path>s)> '.green,
                session_id: current_session_id,
-               backend:    session&.backend_type || '<none>')
+               backend:    current_session&.backend_type || '<none>',
+               path:       current_session.pwd || '?')
       end
 
       def auto_complete(partial)

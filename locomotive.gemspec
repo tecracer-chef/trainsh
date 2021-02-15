@@ -19,6 +19,10 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 2.6'
 
+  spec.bindir        = 'bin'
+  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  spec.require_paths = ['lib']
+
   spec.add_development_dependency 'bump', '~> 0.9'
   spec.add_development_dependency 'bundler-audit', '~> 0.7'
   spec.add_development_dependency 'mdl', '~> 0.9'
@@ -33,4 +37,5 @@ Gem::Specification.new do |spec|
   # spec.add_dependency 'mixlib-log', '~> 3.0'
   spec.add_dependency 'readline', '~> 0.0'
   spec.add_dependency 'thor', '~> 1.1'
+  spec.add_dependency "train", ">= 3.4.9"
 end
