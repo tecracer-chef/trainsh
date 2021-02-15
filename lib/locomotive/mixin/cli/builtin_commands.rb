@@ -8,6 +8,10 @@ module LocomotiveCli
       methods.sort.filter { |method| method.to_s.start_with? BUILTIN_PREFIX }.map { |method| method.to_s.delete_prefix BUILTIN_PREFIX }
     end
 
+    def builtincmd_clear_history(_args = nil)
+      Readline::HISTORY.clear
+    end
+
     def builtincmd_connect(url = nil)
       if url.nil? || url.strip.empty?
         say 'Expecting session url, e.g. `!connect docker://123456789abcdef0`'.red
@@ -30,6 +34,8 @@ module LocomotiveCli
         say 'Expecting remote path and local path, e.g. `!download /etc/passwd /home/ubuntu`'
         return false
       end
+
+      return unless train_mutable?
 
       session.download(remote_path, local_path)
 
@@ -59,6 +65,8 @@ module LocomotiveCli
     end
 
     def builtincmd_env(_args = nil)
+      session.run_idle unless session.env
+
       puts session.env
     end
 
@@ -76,7 +84,7 @@ module LocomotiveCli
       system("#{localpager} #{tempfile.path}")
 
       tempfile.unlink
-    rescue ::Train::NotImplementedError
+    rescue ::NotImplementedError
       say 'Backend for session does not implement file operations'.red
     end
 
@@ -85,6 +93,8 @@ module LocomotiveCli
     end
 
     def builtincmd_pwd(_args = nil)
+      session.run_idle unless session.pwd
+
       puts session.pwd
     end
 
@@ -120,10 +130,22 @@ module LocomotiveCli
         return false
       end
 
+      return unless train_mutable?
+
       session.upload(local_path, remote_path)
 
-    rescue ::Train::NotImplementedError
+    rescue ::Errno::ENOENT
+      say "Local file/directory '#{local_path}' does not exist".red
+    rescue ::NotImplementedError
       say 'Backend for session does not implement upload operation'.red
+    end
+
+    private
+
+    def train_mutable?
+      return true if !session.respond_to?(:upload)
+
+      say "Support for remote file modification needs at least Train #{::Locomotive::TRAIN_MUTABLE_VERSION} (is: #{::Train::VERSION})".red
     end
   end
 end

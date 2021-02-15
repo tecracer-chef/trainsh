@@ -119,6 +119,10 @@ module Locomotive
       command.run
     end
 
+    def run_idle
+      run('#')
+    end
+
     private
 
     def pwd_get

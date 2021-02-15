@@ -10,6 +10,7 @@ require_relative 'mixin/cli/sessions'
 # require_relative 'detectors/target/kitchen.rb'
 
 require 'colored'
+require 'fileutils'
 require 'readline'
 require 'train'
 require 'thor'
@@ -95,8 +96,10 @@ module Locomotive
       def execute_builtin(input)
         cmd, *args = input.split(' ')
 
-        if builtin_commands.include? cmd
-          send("#{BUILTIN_PREFIX}#{cmd}".to_sym, *args)
+        ruby_cmd = cmd.tr('-', '_')
+
+        if builtin_commands.include? ruby_cmd
+          send("#{BUILTIN_PREFIX}#{ruby_cmd}".to_sym, *args)
         else
           say format('Unknown built-in "%<cmd>s"', cmd: cmd)
         end
@@ -131,7 +134,7 @@ module Locomotive
       end
 
       def prompt
-        format('locomotive(%<session_id>d: %<backend>s:%<path>s)> '.green,
+        format('locomotive(%<session_id>d: %<backend>s)> '.green,
                session_id: current_session_id,
                backend:    current_session&.backend_type || '<none>',
                path:       current_session.pwd || '?')
@@ -140,7 +143,7 @@ module Locomotive
       def auto_complete(partial)
         choices = []
 
-        choices.concat(builtin_commands.map { |cmd| "!#{cmd}" })
+        choices.concat(builtin_commands.map { |cmd| "!#{cmd.tr('_', '-')}" })
         choices.concat(sessions.map { |session_id| "@#{session_id}" })
         choices.concat %w[!!!]
 
@@ -154,6 +157,19 @@ module Locomotive
 
       say format('Connected to %<url>s', url: url).bold
       __detect
+
+      # TODO: Extract
+      user_conf_dir = File.join(ENV['HOME'], Locomotive::USER_CONF_DIR)
+      history_file = File.join(user_conf_dir, 'history')
+      FileUtils.mkdir_p(user_conf_dir)
+      FileUtils.touch(history_file)
+      File.readlines(history_file).each { |line| Readline::HISTORY.push line.strip }
+      at_exit {
+        history_file = File.join(user_conf_dir, 'history')
+        File.open(history_file, "w") { |f|
+          f.write Readline::HISTORY.to_a.join("\n")
+        }
+      }
 
       Readline.completion_proc = method(:auto_complete).to_proc
       Readline.completion_append_character = ' '

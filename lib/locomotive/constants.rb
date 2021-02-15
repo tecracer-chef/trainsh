@@ -5,8 +5,11 @@ module Locomotive
   EXEC = 'locomotive'.freeze
 
   # Prefix for environment variables
-  # ENV_PREFIX = 'LOCOMOTIVE_'.freeze
+  ENV_PREFIX = 'LOCOMOTIVE_'.freeze
 
   # The user's configuration directory
-  # USER_CONF_DIR = '.locomotive'.freeze
+  USER_CONF_DIR = '.locomotive'.freeze
+
+  # Minimum version for remote file manipulation
+  TRAIN_MUTABLE_VERSION = '3.5.0'.freeze
 end
