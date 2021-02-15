@@ -1,3 +1,5 @@
+require 'train/errors'
+
 module LocomotiveCli
   module BuiltInCommands
     BUILTIN_PREFIX = 'builtincmd_'.freeze
@@ -15,8 +17,63 @@ module LocomotiveCli
       use_session(url)
     end
 
+    # def builtincmd_copy(source = nil, destination = nil)
+    #   # TODO: Copy files between sessions
+    # end
+
     def builtincmd_detect(_args = nil)
       __detect
+    end
+
+    def builtincmd_download(remote_path = nil, local_path = nil)
+      if remote_path.nil? || local_path.nil?
+        say 'Expecting remote path and local path, e.g. `!download /etc/passwd /home/ubuntu`'
+        return false
+      end
+
+      session.download(remote_path, local_path)
+
+    rescue ::Train::NotImplementedError
+      say 'Backend for session does not implement download operation'.red
+    end
+
+    def builtincmd_edit(path = nil)
+      if path.nil? || path.strip.empty?
+        say 'Expecting remote path, e.g. `!less /tmp/somefile.txt`'.red
+        return false
+      end
+
+      tempfile = read_file(path)
+
+      localeditor = ENV["EDITOR"] || ENV["VISUAL"] || "vi" # TODO: configuration, Windows, ...
+      say format('Using local editor `%<editor>s` for %<tempfile>s', editor: localeditor, tempfile: tempfile.path)
+
+      system("#{localeditor} #{tempfile.path}")
+
+      new_content = File.read(tempfile.path)
+
+      write_file(path, new_content)
+      tempfile.unlink
+    rescue ::Train::NotImplementedError
+      say 'Backend for session does not implement file operations'.red
+    end
+
+    def builtincmd_read(path = nil)
+      if path.nil? || path.strip.empty?
+        say 'Expecting remote path, e.g. `!read /tmp/somefile.txt`'.red
+        return false
+      end
+
+      tempfile = read_file(path)
+      return false unless tempfile
+
+      localpager = ENV["PAGER"] || "less" # TODO: configuration, Windows, ...
+      say format('Using local pager `%<pager>s` for %<tempfile>s', pager: localpager, tempfile: tempfile.path)
+      system("#{localpager} #{tempfile.path}")
+
+      tempfile.unlink
+    rescue ::Train::NotImplementedError
+      say 'Backend for session does not implement file operations'.red
     end
 
     def builtincmd_history(_args = nil)
@@ -43,10 +100,22 @@ module LocomotiveCli
         return false
       end
 
-      # TODO: Seems weird
+      # TODO: Make this more pretty
       session_url = @sessions[session_id].url
 
       use_session(session_url)
+    end
+
+    def builtincmd_upload(local_path = nil, remote_path = nil)
+      if remote_path.nil? || local_path.nil?
+        say 'Expecting remote path and local path, e.g. `!download /home/ubuntu/passwd /etc`'
+        return false
+      end
+
+      session.upload(local_path, remote_path)
+
+    rescue ::Train::NotImplementedError
+      say 'Backend for session does not implement upload operation'.red
     end
   end
 end

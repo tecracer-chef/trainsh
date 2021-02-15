@@ -5,7 +5,7 @@ require 'train'
 module Locomotive
   class Session
     extend Forwardable
-    def_delegators :@connection, :platform, :run_command, :backend_type
+    def_delegators :@connection, :platform, :run_command, :backend_type, :file, :upload, :download
 
     attr_accessor :url, :connection
 
@@ -20,6 +20,7 @@ module Locomotive
       backend = Train.create(data[:backend], data)
 
       @connection = backend.connection
+      connection.wait_until_ready
 
       at_exit { disconnect }
     end

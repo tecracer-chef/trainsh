@@ -2,8 +2,10 @@ require_relative '../locomotive'
 require_relative 'session'
 
 require_relative 'mixin/cli/builtin_commands'
+require_relative 'mixin/cli/file_helpers'
 require_relative 'mixin/cli/sessions'
 
+# TODO
 # require_relative 'detectors/target/env.rb'
 # require_relative 'detectors/target/kitchen.rb'
 
@@ -33,6 +35,7 @@ module Locomotive
 
     no_commands do
       include LocomotiveCli::BuiltInCommands
+      include LocomotiveCli::FileHelpers
       include LocomotiveCli::Sessions
 
       def __disconnect
@@ -41,6 +44,7 @@ module Locomotive
         say 'Disconnected'
       end
 
+      # TODO
       # def __detect_url(url)
       #   url || kitchen_url || ENV['target']
       # end
@@ -82,7 +86,10 @@ module Locomotive
       def execute_via_train(input, session_id = current_session_id)
         return if interactive_command? input
 
-        # PROBLEM: Not open a new shell each time, but "append" (Env vars, Path etc)
+        # TODO: Set last path
+        # TODO: Get path after
+        # TODO: Not open a new shell each time, but "append" (Env vars, Path etc)
+
         command_result = @sessions[session_id].run_command(input)
 
         say command_result.stdout unless command_result.stdout.empty?
@@ -136,7 +143,6 @@ module Locomotive
       def auto_complete(partial)
         choices = []
 
-        # All choices
         choices.concat(builtin_commands.map { |cmd| "!#{cmd}" })
         choices.concat(sessions.map { |session_id| "@#{session_id}" })
         choices.concat %w[!!!]
@@ -152,7 +158,6 @@ module Locomotive
       say format('Connected to %<url>s', url: url).bold
       __detect
 
-      # TODO: Doesn't complete partial commands?
       Readline.completion_proc = method(:auto_complete).to_proc
       Readline.completion_append_character = ' '
 
@@ -173,7 +178,7 @@ module Locomotive
 
     # desc 'copy FILE/DIR|URL FILE/DIR|URL', 'Copy files or directories'
     # def copy(url_or_file, url_or_file)
-    #   # TODO
+    #   # TODO?
     # end
 
     desc 'detect URL', 'Retrieve remote OS and platform information'
@@ -182,9 +187,11 @@ module Locomotive
       __detect
     end
 
-    # desc 'exec URL -- COMMAND', 'Execute remote commands'
+    # desc 'exec URL -- (COMMAND)', 'Execute remote commands'
+    # method_option :file, aliases: '-f', desc: "command file to read"
     # def exec
     #   # TODO
+    #   # TODO: Also accept getting commands from STDIN and from a file
     # end
 
     desc 'list-transports', 'List available transports'
