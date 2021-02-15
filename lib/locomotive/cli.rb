@@ -158,7 +158,7 @@ module Locomotive
       say format('Connected to %<url>s', url: url).bold
       __detect
 
-      # TODO: Extract
+      # History persistence (TODO: Extract)
       user_conf_dir = File.join(ENV['HOME'], Locomotive::USER_CONF_DIR)
       history_file = File.join(user_conf_dir, 'history')
       FileUtils.mkdir_p(user_conf_dir)
@@ -171,6 +171,15 @@ module Locomotive
         }
       }
 
+      # Catch Ctrl-C and exit cleanly
+      stty_save = `stty -g`.chomp
+      trap('INT') do
+        puts "^C"
+        system('stty', stty_save)
+        exit
+      end
+
+      # Autocompletion
       Readline.completion_proc = method(:auto_complete).to_proc
       Readline.completion_append_character = ' '
 
