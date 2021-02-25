@@ -5,7 +5,7 @@ require 'train'
 
 module TrainSH
   class Command
-    MAGIC_STRING = "mVDK6afaqa6fb7kcMqTpR2aoUFbYsRt889G4eGoI".freeze
+    MAGIC_STRING = 'mVDK6afaqa6fb7kcMqTpR2aoUFbYsRt889G4eGoI'.freeze
 
     attr_writer :connection
 
@@ -51,9 +51,7 @@ module TrainSH
       end
       @postfixes.count.times { stdouts.pop } unless @postfixes.empty?
 
-      if stdouts.count > 1
-        raise 'Pre-/Postfix command processing ended up with more than one remaining stdout'
-      end
+      raise 'Pre-/Postfix command processing ended up with more than one remaining stdout' if stdouts.count > 1
 
       result.stdout = stdouts.first
       # result.stderr = "" # TODO
@@ -63,18 +61,18 @@ module TrainSH
 
     def parse(result)
       result.stdout
-        .gsub(/\r\n/, "\n")
-        .gsub(/ *$/, '')
-        .split(MAGIC_STRING)
-        .map(&:strip)
+            .gsub(/\r\n/, "\n")
+            .gsub(/ *$/, '')
+            .split(MAGIC_STRING)
+            .map(&:strip)
     end
 
     def aggregate_commands
       separator = "\necho #{MAGIC_STRING}\n"
 
       commands = @prefixes.reverse.map { |ary| ary[:command] }
-      commands << @command + "\n" + save_exit_code
-      commands.concat @postfixes.map { |ary| ary[:command] }
+      commands << "#{@command}\n#{save_exit_code}"
+      commands.concat(@postfixes.map { |ary| ary[:command] })
 
       commands.join(separator)
     end
@@ -150,7 +148,7 @@ module TrainSH
       end
 
       # Discovery tasks
-      command.prefix(host_get) { |output| @host = output} if host.nil? || host == 'unknown'
+      command.prefix(host_get) { |output| @host = output } if host.nil? || host == 'unknown'
 
       command.run
     end
@@ -166,27 +164,27 @@ module TrainSH
     end
 
     def host_get
-      "hostname"
+      'hostname'
     end
 
     def pwd_get
-      platform.windows? ? "(Get-Location).Path" : "pwd"
+      platform.windows? ? '(Get-Location).Path' : 'pwd'
     end
 
     def pwd_set(path = pwd)
-      return "" if path.nil?
+      return '' if path.nil?
 
       platform.windows? ? "Set-Location #{path}" : "cd #{path}"
     end
 
     # TODO: Preserve Windows environment variables
     def env_get
-      platform.windows? ? "" : "export"
+      platform.windows? ? '' : 'export'
     end
 
     # TODO: Preserve Windows environment variables
     def env_set
-      platform.windows? ? "" : env
+      platform.windows? ? '' : env
     end
   end
 end

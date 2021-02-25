@@ -1,8 +1,17 @@
 {
+  "editor.renderFinalNewline": true,
+  "editor.renderWhitespace":"all",
+  "editor.trimAutoWhitespace": true,
+  "files.exclude": {
+    "**/.*": true,
+    "Gemfile.lock": true,
+    "lib/trainsh/detectors": true,
+    "pkg": true
+  },
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
   "recommendations": [
     "rebornix.ruby",
     "editorconfig.editorconfig"
-  ],
-  "files.exclude": {
-  }
+  ]
 }

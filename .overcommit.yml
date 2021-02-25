@@ -27,6 +27,8 @@ PreCommit:
     eol: "\n"
   Mdl:
     enabled: true
+    include:
+      - "*.md"
   Rspec:
     enabled: false
     required_executable: 'rspec'

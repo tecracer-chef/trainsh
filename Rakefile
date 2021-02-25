@@ -26,3 +26,12 @@ require 'bump/tasks'
 %w[set pre file current].each { |task| Rake::Task["bump:#{task}"].clear }
 Bump.changelog = :editor
 Bump.tag_by_default = true
+
+namespace :lint do
+  desc 'Linting for all markdown files'
+  task :markdown do
+    require 'mdl'
+
+    MarkdownLint.run(%w[--verbose README.md CHANGELOG.md])
+  end
+end

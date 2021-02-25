@@ -39,7 +39,6 @@ module TrainSH
         return unless train_mutable?
 
         session.download(remote_path, local_path)
-
       rescue ::Train::NotImplementedError
         say 'Backend for session does not implement download operation'.red
       end
@@ -52,7 +51,7 @@ module TrainSH
 
         tempfile = read_file(path)
 
-        localeditor = ENV["EDITOR"] || ENV["VISUAL"] || "vi" # TODO: configuration, Windows, ...
+        localeditor = ENV['EDITOR'] || ENV['VISUAL'] || 'vi' # TODO: configuration, Windows, ...
         say format('Using local editor `%<editor>s` for %<tempfile>s', editor: localeditor, tempfile: tempfile.path)
 
         system("#{localeditor} #{tempfile.path}")
@@ -78,7 +77,7 @@ module TrainSH
         tempfile = read_file(path)
         return false unless tempfile
 
-        localpager = ENV["PAGER"] || "less" # TODO: configuration, Windows, ...
+        localpager = ENV['PAGER'] || 'less' # TODO: configuration, Windows, ...
         say format('Using local pager `%<pager>s` for %<tempfile>s', pager: localpager, tempfile: tempfile.path)
         system("#{localpager} #{tempfile.path}")
 
@@ -139,7 +138,6 @@ module TrainSH
         return unless train_mutable?
 
         session.upload(local_path, remote_path)
-
       rescue ::Errno::ENOENT
         say "Local file/directory '#{local_path}' does not exist".red
       rescue ::NotImplementedError

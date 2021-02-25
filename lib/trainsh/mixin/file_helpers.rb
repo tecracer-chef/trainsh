@@ -5,12 +5,10 @@ module TrainSH
     module FileHelpers
       def read_file(path)
         remotefile = session.file(path)
-        unless remotefile.exist?
-          say format('Remote file %<filename>s does not exist', filename: path)
-        end
+        say format('Remote file %<filename>s does not exist', filename: path) unless remotefile.exist?
 
         localfile = Tempfile.open
-        localfile.write(remotefile.content || "")
+        localfile.write(remotefile.content || '')
         localfile.close
 
         localfile

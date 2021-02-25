@@ -97,12 +97,12 @@ module TrainSH
 
         command_result = @sessions[session_id].run(input)
 
-        say command_result.stdout unless command_result.stdout&.empty?
-        say command_result.stderr.red unless command_result.stderr&.empty?
+        say command_result.stdout unless command_result.stdout && command_result.stdout.empty?
+        say command_result.stderr.red unless command_result.stderr && command_result.stderr.empty?
       end
 
       def execute_builtin(input)
-        cmd, *args = input.split(' ')
+        cmd, *args = input.split
 
         ruby_cmd = cmd.tr('-', '_')
 
@@ -114,7 +114,7 @@ module TrainSH
       end
 
       def execute_via_session(input)
-        session_id, *data = input.split(' ')
+        session_id, *data = input.split
 
         session_id = validate_session_id(session_id)
         if session_id.nil?
@@ -143,7 +143,7 @@ module TrainSH
 
       def prompt
         exitcode = current_session.exitcode
-        exitcode_prefix = (exitcode != 0) ? format('E%02d ', exitcode).red : 'OK '.green
+        exitcode_prefix = exitcode.zero? ? 'OK '.green : format('E%02d ', exitcode).red
 
         format(::TrainSH::PROMPT,
                exitcode:        exitcode,
@@ -178,7 +178,7 @@ module TrainSH
     end
 
     # class_option :log_level, desc: "Log level", aliases: "-l", default: :info
-    class_option :messy, desc: "Skip deletion of temporary files for speedup", default: false, type: :boolean
+    class_option :messy, desc: 'Skip deletion of temporary files for speedup', default: false, type: :boolean
 
     desc 'connect URL', 'Connect to a destination interactively'
 
@@ -197,7 +197,7 @@ module TrainSH
       File.readlines(history_file).each { |line| Readline::HISTORY.push line.strip }
       at_exit {
         history_file = File.join(user_conf_dir, 'history')
-        File.open(history_file, "w") { |f|
+        File.open(history_file, 'w') { |f|
           f.write Readline::HISTORY.to_a.join("\n")
         }
       }
@@ -205,7 +205,7 @@ module TrainSH
       # Catch Ctrl-C and exit cleanly
       stty_save = `stty -g`.chomp
       trap('INT') do
-        puts "^C"
+        puts '^C'
         system('stty', stty_save)
         exit
       end
