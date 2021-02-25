@@ -1,5 +1,0 @@
-# require_relative 'locomotive/config'
-require_relative 'locomotive/constants'
-require_relative 'locomotive/errors'
-# require_relative 'locomotive/log'
-require_relative 'locomotive/version'

@@ -1,8 +1,9 @@
+require 'benchmark'
 require 'forwardable'
 
 require 'train'
 
-module Locomotive
+module TrainSH
   class Command
     MAGIC_STRING = "mVDK6afaqa6fb7kcMqTpR2aoUFbYsRt889G4eGoI".freeze
 
@@ -50,9 +51,12 @@ module Locomotive
       end
       @postfixes.count.times { stdouts.pop } unless @postfixes.empty?
 
-      raise 'Pre-/Postfix command processing ended up with more than one remaining stdout' unless stdouts.count == 1
+      if stdouts.count > 1
+        raise 'Pre-/Postfix command processing ended up with more than one remaining stdout'
+      end
 
       result.stdout = stdouts.first
+      # result.stderr = "" # TODO
       result.exit_status = 0 # TODO
       result
     end
@@ -69,10 +73,14 @@ module Locomotive
       separator = "\necho #{MAGIC_STRING}\n"
 
       commands = @prefixes.reverse.map { |ary| ary[:command] }
-      commands << @command
+      commands << @command + "\n" + save_exit_code
       commands.concat @postfixes.map { |ary| ary[:command] }
 
       commands.join(separator)
+    end
+
+    def save_exit_code
+      @connection.platform.windows? ? "$#{TrainSH::EXITCODE_VAR}=$LastExitCode" : "export #{TrainSH::EXITCODE_VAR}=$?"
     end
   end
 
@@ -82,7 +90,7 @@ module Locomotive
 
     attr_reader :connection, :backend, :host
 
-    attr_accessor :pwd, :env
+    attr_accessor :pwd, :env, :ping, :exitcode
 
     def initialize(url = nil)
       connect(url) unless url.nil?
@@ -92,7 +100,12 @@ module Locomotive
       @url = url
 
       data = Train.unpack_target_from_uri(url)
+
+      # TODO: Wire up with "messy" parameter
+      data[:cleanup] = false
+
       backend = Train.create(data[:backend], data)
+      return false unless backend
 
       @backend = data[:backend]
       @host = data[:host]
@@ -120,13 +133,21 @@ module Locomotive
       Addressable::URI.parse(@url).omit(:password).to_s
     end
 
-    def run(command)
+    def run(command, skip_affixes: false)
       command = Command.new(command, @connection)
 
-      command.prefix(pwd_set)
-      command.postfix(pwd_get) { |output| @pwd = output }
-      command.prefix(env_set)
-      command.postfix(env_get) { |output| @env = output }
+      # Save exit code
+      command.postfix(exitcode_get) { |output| @exitcode = output.to_i }
+
+      # Request UTF-8 instead of UTF-16
+      # command.prefix("$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'") if platform.windows?
+
+      unless skip_affixes
+        command.prefix(pwd_set)
+        command.postfix(pwd_get) { |output| @pwd = output }
+        command.prefix(env_set)
+        command.postfix(env_get) { |output| @env = output }
+      end
 
       # Discovery tasks
       command.prefix(host_get) { |output| @host = output} if host.nil? || host == 'unknown'
@@ -135,10 +156,14 @@ module Locomotive
     end
 
     def run_idle
-      run('#')
+      @ping = ::Benchmark.measure { run('#', skip_affixes: true) }.real * 1000
     end
 
     private
+
+    def exitcode_get
+      "echo $#{TrainSH::EXITCODE_VAR}"
+    end
 
     def host_get
       "hostname"

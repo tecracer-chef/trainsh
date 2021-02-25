@@ -1,11 +1,11 @@
 lib = File.expand_path('lib', __dir__)
 $LOAD_PATH.unshift lib unless $LOAD_PATH.include?(lib)
-require 'locomotive/constants'
-require 'locomotive/version'
+require 'trainsh/constants'
+require 'trainsh/version'
 
 Gem::Specification.new do |spec|
-  spec.name        = Locomotive::EXEC
-  spec.version     = Locomotive::VERSION
+  spec.name        = TrainSH::EXEC
+  spec.version     = TrainSH::VERSION
   spec.licenses    = ['Nonstandard']
 
   spec.summary     = 'Interactive Shell for Remote Systems'

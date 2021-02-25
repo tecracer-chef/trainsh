@@ -1,9 +1,9 @@
-require_relative '../locomotive'
+require_relative '../trainsh'
 require_relative 'session'
 
-require_relative 'mixin/cli/builtin_commands'
-require_relative 'mixin/cli/file_helpers'
-require_relative 'mixin/cli/sessions'
+require_relative 'mixin/builtin_commands'
+require_relative 'mixin/file_helpers'
+require_relative 'mixin/sessions'
 
 # TODO
 # require_relative 'detectors/target/env.rb'
@@ -15,7 +15,7 @@ require 'readline'
 require 'train'
 require 'thor'
 
-module Locomotive
+module TrainSH
   class Cli < Thor
     include Thor::Actions
     check_unknown_options!
@@ -28,16 +28,16 @@ module Locomotive
     map %w[version] => :__print_version
     desc 'version', 'Display version'
     def __print_version
-      say "#{Locomotive::PRODUCT} #{Locomotive::VERSION} (Ruby #{RUBY_VERSION}-#{RUBY_PLATFORM})"
+      say "#{TrainSH::PRODUCT} #{TrainSH::VERSION} (Ruby #{RUBY_VERSION}-#{RUBY_PLATFORM})"
     end
 
     EXIT_COMMANDS = %w[!!! exit quit logout disconnect].freeze
     INTERACTIVE_COMMANDS = %w[more less vi vim nano].freeze
 
     no_commands do
-      include LocomotiveCli::BuiltInCommands
-      include LocomotiveCli::FileHelpers
-      include LocomotiveCli::Sessions
+      include TrainSH::Mixin::BuiltInCommands
+      include TrainSH::Mixin::FileHelpers
+      include TrainSH::Mixin::Sessions
 
       def __disconnect
         session.close
@@ -51,6 +51,8 @@ module Locomotive
       # end
 
       def __detect
+        raise 'No session in __detect' unless session
+
         platform = session.platform
 
         say format('Platform: %<title>s %<release>s (%<arch>s)',
@@ -59,15 +61,18 @@ module Locomotive
                    arch:    platform.arch)
         say format('Hierarchy: %<hierarchy>s',
                    hierarchy: platform.family_hierarchy.reverse.join('/'))
+        say 'Measuring ping over connection...'
 
         # Idle command will also trigger discovery commands on first run
         session.run_idle
+
+        say format('Ping: %<ping>dms', ping: session.ping) if session.ping
       end
 
       def target_detectors
         Dir[File.join(__dir__, 'lib', '*.rb')].sort.each { |file| require file }
 
-        Locomotive::Detectors::TargetDetector.descendants
+        TrainSH::Detectors::TargetDetector.descendants
       end
 
       def execute(input)
@@ -92,8 +97,8 @@ module Locomotive
 
         command_result = @sessions[session_id].run(input)
 
-        say command_result.stdout unless command_result.stdout.empty?
-        say command_result.stderr.red
+        say command_result.stdout unless command_result.stdout&.empty?
+        say command_result.stderr.red unless command_result.stderr&.empty?
       end
 
       def execute_builtin(input)
@@ -137,11 +142,16 @@ module Locomotive
       end
 
       def prompt
-        format(::Locomotive::PROMPT.green,
-               session_id: current_session_id,
-               backend:    current_session.backend || 'unknown',
-               host:       current_session.host || 'unknown',
-               path:       current_session.pwd || '?')
+        exitcode = current_session.exitcode
+        exitcode_prefix = (exitcode != 0) ? format('E%02d ', exitcode).red : 'OK '.green
+
+        format(::TrainSH::PROMPT,
+               exitcode:        exitcode,
+               exitcode_prefix: exitcode_prefix,
+               session_id:      current_session_id,
+               backend:         current_session.backend || 'unknown',
+               host:            current_session.host || 'unknown',
+               path:            current_session.pwd || '?')
       end
 
       def auto_complete(partial)
@@ -153,17 +163,34 @@ module Locomotive
 
         choices.filter { |choice| choice.start_with? partial }
       end
+
+      # def get_log_level(level)
+      #   valid = %w{debug info warn error fatal}
+      #
+      #   if valid.include?(level)
+      #     l = level
+      #   else
+      #     l = "info"
+      #   end
+      #
+      #   Logger.const_get(l.upcase)
+      # end
     end
 
-    desc 'connect URL', 'Connect to a destination interactively'
-    def connect(url)
-      use_session(url)
+    # class_option :log_level, desc: "Log level", aliases: "-l", default: :info
+    class_option :messy, desc: "Skip deletion of temporary files for speedup", default: false, type: :boolean
 
-      say format('Connected to %<url>s', url: url).bold
+    desc 'connect URL', 'Connect to a destination interactively'
+
+    def connect(url)
+      exit unless use_session(url)
+
+      say format('Connected to %<url>s', url: session.url).bold
+      say 'Running platform detection...'
       __detect
 
       # History persistence (TODO: Extract)
-      user_conf_dir = File.join(ENV['HOME'], Locomotive::USER_CONF_DIR)
+      user_conf_dir = File.join(ENV['HOME'], TrainSH::USER_CONF_DIR)
       history_file = File.join(user_conf_dir, 'history')
       FileUtils.mkdir_p(user_conf_dir)
       FileUtils.touch(history_file)
@@ -209,7 +236,7 @@ module Locomotive
 
     desc 'detect URL', 'Retrieve remote OS and platform information'
     def detect(url)
-      use_session(url)
+      exit unless use_session(url)
       __detect
     end
 
