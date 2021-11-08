@@ -24,18 +24,19 @@ module TrainSH
       end
 
       def builtincmd_copy(src = nil, dst = nil)
-        unless src && dst
+        src_id, src_path = src&.match(SESSION_PATH_REGEX)&.captures
+        dst_id, dst_path = dst&.match(SESSION_PATH_REGEX)&.captures
+        unless src && dst && src_id && dst_id && src_path && dst_path
           show_error 'Expecting source and destination, e.g. `!copy @0:/etc/hosts @1:/home/ubuntu/old_hosts'
-          return false
+          return
         end
-
-        src_id, src_path = src.match(SESSION_PATH_REGEX).captures
-        dst_id, dst_path = dst.match(SESSION_PATH_REGEX).captures
-        return unless src_id && dst_id && src_path && dst_path
 
         src_session = session(src_id)
         dst_session = session(dst_id)
-        return unless src_session && dst_session
+        unless src_session && dst_session
+          show_error 'Expecting valid session identifiers. Check available sessions via !sessions'
+          return
+        end
 
         content = src_session.file(src_path)
         dst_session.file(dst_path).content = content
@@ -143,7 +144,7 @@ module TrainSH
       def builtincmd_ping(_args = nil)
         session.run_idle
 
-        show_messag format('Ping: %<ping>dms', ping: session.ping)
+        show_message format('Ping: %<ping>dms', ping: session.ping)
       end
 
       # rubocop:disable Lint/Debugger

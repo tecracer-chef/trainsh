@@ -1,0 +1,21 @@
+{
+  "name": "Ruby",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "VARIANT": "3-bullseye"
+    }
+  },
+  "settings": {
+    "remote.containers.logLevel": "info"
+  },
+  "extensions": [
+    "editorconfig.editorconfig",
+    "rebornix.ruby",
+    "redhat.vscode-yaml",
+    "VisualStudioExptTeam.vscodeintellicode",
+    "wingrunr21.vscode-ruby"
+  ],
+  "remoteUser": "vscode",
+  "postAttachCommand": "bundle config set --local with 'development' && bundle install && overcommit --install && overcommit --sign && direnv allow ${containerWorkspaceFolder}"
+}

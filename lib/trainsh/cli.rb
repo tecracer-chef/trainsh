@@ -6,13 +6,10 @@ require_relative 'mixin/file_helpers'
 require_relative 'mixin/sessions'
 require_relative 'mixin/shell_output'
 
-# TODO
-# require_relative 'detectors/target/env.rb'
-# require_relative 'detectors/target/kitchen.rb'
-
 require 'colored'
 require 'fileutils'
 require 'readline'
+require 'rubygems'
 require 'train'
 require 'thor'
 
@@ -33,6 +30,9 @@ module TrainSH
 
     EXIT_COMMANDS = %w[!!! exit quit logout disconnect].freeze
     INTERACTIVE_COMMANDS = %w[more less vi vim nano].freeze
+
+    NON_OS_TRANSPORTS = %w[aws core kubernetes azure pgsql vsphere vault digitalocean rest].freeze
+    CORE_TRANSPORTS = %w[docker ssh].freeze
 
     no_commands do
       include TrainSH::Mixin::BuiltInCommands
@@ -71,9 +71,11 @@ module TrainSH
       end
 
       def target_detectors
-        Dir[File.join(__dir__, 'lib', '*.rb')].sort.each { |file| require file }
-
         TrainSH::Detectors::TargetDetector.descendants
+      end
+
+      def detect_target
+        target_detectors.detect(&:url).url
       end
 
       def execute(input)
@@ -181,6 +183,10 @@ module TrainSH
       #
       #   Logger.const_get(l.upcase)
       # end
+
+      def local_gems
+        Gem::Specification.sort_by { |g| [g.name.downcase, g.version] }.group_by(&:name)
+      end
     end
 
     # class_option :log_level, desc: "Log level", aliases: "-l", default: :info
@@ -191,13 +197,16 @@ module TrainSH
       Create an interactive shell session with the remote system. The specified URL has to match the
       chosen transport plugin.
 
-      Examples:
+      If no URL was given, possible targets are detected from the environment variable TARGET or any
+      existing Test Kitchen instances (max: 1).
+
+      URL Examples:
         docker://d9443b195d16
         local://
         ssh://user@remote.example.com
         winrm://Administrator:PASSWORD@10.2.42.1
 
-      Examples from non-standard transports:
+      URL Examples from non-standard transports:
         aws-ssm://i-1234567890ab
         serial://dev/ttyUSB1/9600
         telnet://127.0.0.1
@@ -209,8 +218,20 @@ module TrainSH
 
       Passwords currently have to be part of the URL.
     DESC
-    def connect(url)
+    def connect(url = nil)
       # TODO: Pass options to `use_session`
+      unless url
+        show_message 'No URL given, trying to detect ...'
+        url = detect_target
+
+        show_message "Detected URL to be #{url}" if url
+      end
+
+      unless url
+        show_error 'No target could be detected'
+        exit
+      end
+
       exit unless use_session(url)
 
       say format('Connected to %<url>s', url: session.url).bold
@@ -255,11 +276,13 @@ module TrainSH
 
         execute input
       end
+    rescue Interrupt
+      show_error 'Interrupted execution'
     end
 
     # desc 'copy FILE/DIR|URL FILE/DIR|URL', 'Copy files or directories'
     # def copy(url_or_file, url_or_file)
-    #   # TODO?
+    #   # TODO
     # end
 
     desc 'detect URL', 'Retrieve remote OS and platform information'
@@ -280,13 +303,10 @@ module TrainSH
 
     desc 'list-transports', 'List available transports'
     def list_transports
-      # TODO: Train only lazy-loads and does not have a full registry
-      #       https://github.com/inspec/train/blob/be90ca53ea1c1e8aa7439c504fbee86f4b399d83/lib/train.rb#L38-L61
+      installed = local_gems.select { |name| name.start_with? 'train-' }.keys.map { |name| name.delete_prefix('train-') }
+      transports = installed - NON_OS_TRANSPORTS + CORE_TRANSPORTS
 
-      # TODO: Filter for only "OS" transports as well
-      transports = %w[local ssh winrm docker]
-
-      say "Available transports: #{transports.sort.join(', ')}"
+      say "Installed transports: #{transports.sort.join(', ')}"
     end
   end
 end
