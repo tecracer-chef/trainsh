@@ -9,6 +9,11 @@ module TrainSH
         methods.sort.filter { |method| method.to_s.start_with? BUILTIN_PREFIX }.map { |method| method.to_s.delete_prefix BUILTIN_PREFIX }
       end
 
+      def clean_error(message)
+        say message.red
+        session.exitcode = -1
+      end
+
       def builtincmd_clear_history(_args = nil)
         Readline::HISTORY.clear
       end
@@ -26,9 +31,30 @@ module TrainSH
       #   # TODO: Copy files between sessions
       # end
 
+      def builtincmd_help(_args = nil)
+        say <<~HELP
+          Unprefixed commands get sent to the remote host of the active session.
+
+          Commands with a prefix of `@n` with n being a number will be executed on the specified session. For a list of sessions check `!sessions`.
+
+          Commands with a prefix of `.` get executed locally.
+
+          Builtin commands are prefixed with `!`:
+        HELP
+
+        builtin_commands.each { |cmd| say " !#{cmd}" }
+      end
+
       def builtincmd_detect(_args = nil)
         __detect
       end
+
+      # rubocop:disable Lint/Debugger
+      def builtincmd_pry(_args = nil)
+        require 'pry' unless defined?(binding.pry)
+        binding.pry
+      end
+      # rubocop:enable Lint/Debugger
 
       def builtincmd_download(remote_path = nil, local_path = nil)
         if remote_path.nil? || local_path.nil?
@@ -39,8 +65,10 @@ module TrainSH
         return unless train_mutable?
 
         session.download(remote_path, local_path)
-      rescue ::Train::NotImplementedError
-        say 'Backend for session does not implement download operation'.red
+      rescue NotImplementedError
+        clean_error 'Backend for session does not implement file operations'
+      rescue StandardError => e
+        clean_error "Error occured: #{e.message}"
       end
 
       def builtincmd_edit(path = nil)
@@ -60,8 +88,10 @@ module TrainSH
 
         write_file(path, new_content)
         tempfile.unlink
-      rescue ::Train::NotImplementedError
-        say 'Backend for session does not implement file operations'.red
+      rescue NotImplementedError
+        clean_error 'Backend for session does not implement file operations'
+      rescue StandardError => e
+        clean_error "Error occured: #{e.message}"
       end
 
       def builtincmd_env(_args = nil)
@@ -70,7 +100,7 @@ module TrainSH
 
       def builtincmd_read(path = nil)
         if path.nil? || path.strip.empty?
-          say 'Expecting remote path, e.g. `!read /tmp/somefile.txt`'.red
+          clean_error 'Expecting remote path, e.g. `!read /tmp/somefile.txt`'
           return false
         end
 
@@ -82,8 +112,10 @@ module TrainSH
         system("#{localpager} #{tempfile.path}")
 
         tempfile.unlink
-      rescue ::NotImplementedError
-        say 'Backend for session does not implement file operations'.red
+      rescue NotImplementedError
+        clean_error 'Backend for session does not implement file operations'
+      rescue StandardError => e
+        clean_error "Error occured: #{e.message}"
       end
 
       def builtincmd_history(_args = nil)
@@ -117,11 +149,7 @@ module TrainSH
 
       def builtincmd_session(session_id = nil)
         session_id = validate_session_id(session_id)
-
-        if session_id.nil?
-          say 'Expecting valid session id, e.g. `!session 2`'.red
-          return false
-        end
+        return if session_id.nil?
 
         # TODO: Make this more pretty
         session_url = @sessions[session_id].url
@@ -131,7 +159,7 @@ module TrainSH
 
       def builtincmd_upload(local_path = nil, remote_path = nil)
         if remote_path.nil? || local_path.nil?
-          say 'Expecting remote path and local path, e.g. `!download /home/ubuntu/passwd /etc`'
+          clean_error 'Expecting remote path and local path, e.g. `!download /home/ubuntu/passwd /etc'
           return false
         end
 
@@ -139,9 +167,11 @@ module TrainSH
 
         session.upload(local_path, remote_path)
       rescue ::Errno::ENOENT
-        say "Local file/directory '#{local_path}' does not exist".red
-      rescue ::NotImplementedError
-        say 'Backend for session does not implement upload operation'.red
+        clean_error "Local file/directory '#{local_path}' does not exist"
+      rescue NotImplementedError
+        clean_error 'Backend for session does not implement upload operation'
+      rescue StandardError => e
+        clean_error "Error occured: #{e.message}"
       end
 
       private

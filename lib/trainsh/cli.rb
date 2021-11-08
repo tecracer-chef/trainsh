@@ -19,7 +19,6 @@ module TrainSH
   class Cli < Thor
     include Thor::Actions
     check_unknown_options!
-    # add_runtime_options!
 
     def self.exit_on_failure?
       true
@@ -76,6 +75,11 @@ module TrainSH
       end
 
       def execute(input)
+        if input == '?'
+          execute_builtin 'help'
+          return
+        end
+
         case input[0]
         when '.'
           execute_locally input[1..]
@@ -142,7 +146,7 @@ module TrainSH
       end
 
       def prompt
-        exitcode = current_session.exitcode
+        exitcode = current_session.exitcode || 0
         exitcode_prefix = exitcode.zero? ? 'OK '.green : format('E%02d ', exitcode).red
 
         format(::TrainSH::PROMPT,
@@ -159,7 +163,7 @@ module TrainSH
 
         choices.concat(builtin_commands.map { |cmd| "!#{cmd.tr('_', '-')}" })
         choices.concat(sessions.map { |session_id| "@#{session_id}" })
-        choices.concat %w[!!!]
+        choices.concat %w[!!! ?]
 
         choices.filter { |choice| choice.start_with? partial }
       end
@@ -181,8 +185,30 @@ module TrainSH
     class_option :messy, desc: 'Skip deletion of temporary files for speedup', default: false, type: :boolean
 
     desc 'connect URL', 'Connect to a destination interactively'
+    long_desc <<-DESC
+      Create an interactive shell session with the remote system. The specified URL has to match the
+      chosen transport plugin.
 
+      Examples:
+        docker://d9443b195d16
+        local://
+        ssh://user@remote.example.com
+        winrm://Administrator:PASSWORD@10.2.42.1
+
+      Examples from non-standard transports:
+        aws-ssm://i-1234567890ab
+        serial://dev/ttyUSB1/9600
+        telnet://127.0.0.1
+        vsphere-gom://Administrator@vcenter.server/virtual.machine
+
+      Every transport has its own, proprietary options which can currently only be added as URL
+      query parameters:
+        ssh://user@remote.example.com?key_files=/home/ubuntu/test.pem
+
+      Passwords currently have to be part of the URL.
+    DESC
     def connect(url)
+      # TODO: Pass options to `use_session`
       exit unless use_session(url)
 
       say format('Connected to %<url>s', url: session.url).bold
@@ -235,6 +261,9 @@ module TrainSH
     # end
 
     desc 'detect URL', 'Retrieve remote OS and platform information'
+    long_desc <<~DESC
+      Detect remote OS via Train. Uses the same schema as URLs for `connect`.
+    DESC
     def detect(url)
       exit unless use_session(url)
       __detect

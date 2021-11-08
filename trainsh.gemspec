@@ -12,9 +12,10 @@ Gem::Specification.new do |spec|
   spec.description = "Based on the Train ecosystem, provide a shell to manage systems via a multitude of transports."
   spec.authors     = ["Thomas Heinen"]
   spec.email       = ["theinen@tecracer.de"]
-  spec.homepage    = "https://chef.tecracer.de"
+  spec.homepage    = "https://github.com/tecracer-chef/trainsh"
 
   spec.files       = Dir["lib/**/**/**"]
+  spec.files      += Dir['bin/**/*']
   spec.files      += ["README.md", "CHANGELOG.md"]
 
   spec.required_ruby_version = ">= 2.6"
