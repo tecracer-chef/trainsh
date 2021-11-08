@@ -4,6 +4,7 @@ require_relative 'session'
 require_relative 'mixin/builtin_commands'
 require_relative 'mixin/file_helpers'
 require_relative 'mixin/sessions'
+require_relative 'mixin/shell_output'
 
 # TODO
 # require_relative 'detectors/target/env.rb'
@@ -37,6 +38,7 @@ module TrainSH
       include TrainSH::Mixin::BuiltInCommands
       include TrainSH::Mixin::FileHelpers
       include TrainSH::Mixin::Sessions
+      include TrainSH::Mixin::ShellOutput
 
       def __disconnect
         session.close

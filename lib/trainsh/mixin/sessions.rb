@@ -20,7 +20,9 @@ module TrainSH
       end
 
       def session(session_id = current_session_id)
-        @sessions[session_id]
+        id = validate_session_id(session_id)
+
+        @sessions[id] if id
       end
 
       # ?
@@ -42,7 +44,7 @@ module TrainSH
           return
         end
 
-        unless session_id.match?(/^[0-9]+$/)
+        unless session_id.to_s.match?(/^[0-9]+$/)
           say 'Expected session id to be numeric'.red
           return
         end
