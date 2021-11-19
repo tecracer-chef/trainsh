@@ -69,6 +69,9 @@ Clear your TrainSH history, for example to remove clutter or sensitive informati
 `!connect <uri>`
 Connect to another system. The URI needs to match the format of the used Train transport, which is usually `transportname://host` but varies. See the Train transport's documentation for details.
 
+`!copy @<session>:/<path> @<session>:/<path>`
+Copy a file between two established sessions.
+
 `!detect`
 Re-runs the OS detection which is running automatically on start. This will determine the OS, OS-family and general platform information via Train.
 
@@ -80,6 +83,9 @@ Downloads the remote file as temporary file and opens the system default editor 
 
 `!env`
 Prints the environment variables of your remote shell. This will be filled on first command invocation to save IO. **Currently unsupported for Windows remote systems**
+
+`!help`
+Print out help
 
 `!history`
 Output your TrainSH command history. As this uses the popular Readline library, you can also navigate your history with the Up/Down arrows or use Ctrl-R for reverse search. You can do auto completion for built-in commands.
@@ -141,3 +147,15 @@ To make this easier, internal commands get attached to your input like this:
 - Postfix: Retrieve and save new environment variables
 
 Output of commands gets separated by outputting a highly random string between, which should not result in false positives. If a false positive occurs for some reason, TrainSH will fail and output an error.
+
+## Target Detection
+
+As providing target URLs to connect to can be tedious, TrainSH will detect targets to connect to via plugins. In these cases, `trainsh connect` does not need any parameters.
+
+### Environment Variables
+
+This will check the `TARGET` environment variable for a URL and use it to connect. Only one target is allowed.
+
+### Test Kitchen Configuration
+
+This will detect if the current directory has a Test Kitchen configuration and a created machine. If so, it will connect to the machine by parsing information in `.kitchen/` and the kitchen configuration file.

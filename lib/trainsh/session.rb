@@ -1,10 +1,11 @@
 require 'benchmark'
 require 'forwardable'
-
+require 'cgi'
 require 'train'
 
 module TrainSH
   class Command
+    # Used for command separation, randomly generated
     MAGIC_STRING = 'mVDK6afaqa6fb7kcMqTpR2aoUFbYsRt889G4eGoI'.freeze
 
     attr_writer :connection
@@ -98,6 +99,7 @@ module TrainSH
       @url = url
 
       data = Train.unpack_target_from_uri(url)
+      data.transform_values! { |val| CGI.unescape(val) }
 
       # TODO: Wire up with "messy" parameter
       data[:cleanup] = false

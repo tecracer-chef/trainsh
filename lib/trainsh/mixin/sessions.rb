@@ -20,7 +20,9 @@ module TrainSH
       end
 
       def session(session_id = current_session_id)
-        @sessions[session_id]
+        id = validate_session_id(session_id)
+
+        @sessions[id] if id
       end
 
       # ?
@@ -37,13 +39,23 @@ module TrainSH
       end
 
       def validate_session_id(session_id)
-        unless session_id.match?(/^[0-9]+$/)
+        unless session_id
+          say 'Expecting valid session id, e.g. `!session 2`'.red
+          return
+        end
+
+        unless session_id.to_s.match?(/^[0-9]+$/)
           say 'Expected session id to be numeric'.red
           return
         end
 
         if @sessions[session_id.to_i].nil?
-          say format('No session id [%s] found', session_id).red
+          say 'Expecting valid session id, e.g. `!session 2`'.red
+
+          say "\nActive sessions:"
+          @sessions.each_with_index { |data, idx| say "[#{idx}] #{data.url}" }
+          say
+
           return
         end
 
