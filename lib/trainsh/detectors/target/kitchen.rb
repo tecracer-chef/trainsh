@@ -22,7 +22,10 @@ module TrainSH
 
         # Can get user + protocol only from kitchen
         instance_name = File.basename(files.first, '.yml')
-        instance_data = YAML.safe_load(`kitchen diagnose #{instance_name} --json`)
+        env_prefix    = prefix_env_vars
+        cmd           = "#{env_prefix} kitchen diagnose #{instance_name}"
+        instance_data = YAML.safe_load(`#{cmd}`, [Symbol, Array, String])
+
         transport = instance_data.dig('instances', instance_name, 'transport')
 
         # TODO: Additional parameters like keypair etc
@@ -37,6 +40,14 @@ module TrainSH
       def self.kitchen_directory
         # TODO: Recurse up
         '.kitchen' if Dir.exist?('.kitchen')
+      end
+
+      def self.prefix_env_vars
+        kitchen_vars = ENV.select { |key, _value| key.start_with? 'KITCHEN_' }
+
+        # rubocop:disable Style/StringConcatenation
+        kitchen_vars.map { |key, value| "#{key}=\"#{value}\"" }.join(' ') + ' '
+        # rubocop:enable Style/StringConcatenation
       end
     end
   end

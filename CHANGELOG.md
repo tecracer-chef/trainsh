@@ -9,6 +9,7 @@
 - Add output on copying files cross-session and editing/saving
 - Add devcontainer for VSCode
 - Change errors to be red, Shell built-in to yellow
+- Fix handling of URL encoded parameters
 - Fix `list-transports` to output all installed non-API transports
 - Fix crashes on unexpected input in shell
 - Fix exception handling in various places
